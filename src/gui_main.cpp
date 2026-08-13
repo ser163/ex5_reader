@@ -87,7 +87,9 @@ void openBook(const std::wstring& pathW) {
     updateTitle();
     SendMessageW(g_hList, LB_RESETCONTENT, 0, 0);
     for (auto& c : g_book.chapters()) {
-        std::wstring item = L"第 " + std::to_wstring(c.index) + L" 章  " + u8w(c.title);
+        // sidebar 只显示用户原 title,不再自动拼 "第 N 章"。
+        // 这样 EX5 里写"首次发布"就显示"首次发布",不会被覆盖前缀。
+        std::wstring item = u8w(c.title);
         SendMessageW(g_hList, LB_ADDSTRING, 0, (LPARAM)item.c_str());
     }
     int start = 0, pos = 0; long long off = 0;
