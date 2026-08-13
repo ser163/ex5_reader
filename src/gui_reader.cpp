@@ -47,7 +47,7 @@ static void appendSeg(int chapPos) {
     if (chapPos < 0 || chapPos >= (int)chs.size()) return;
     const ex5::Chapter& c = chs[(size_t)chapPos];
 
-    std::string header = "\n──────────── 第 " + std::to_string(c.index) + " 章  "
+    std::string header = "\n──────────── "
                        + c.title + " ────────────\n\n";
     std::string body = g_book.chapterText(c.index);
 
@@ -67,7 +67,7 @@ static long prependSeg(int chapPos) {
     const auto& chs = g_book.chapters();
     if (chapPos < 0 || chapPos >= (int)chs.size()) return 0;
     const ex5::Chapter& c = chs[(size_t)chapPos];
-    std::string header = "\n──────────── 第 " + std::to_string(c.index) + " 章  "
+    std::string header = "\n──────────── "
                        + c.title + " ────────────\n\n";
     std::string body = g_book.chapterText(c.index);
     std::string block = header + body + "\n";
