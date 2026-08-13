@@ -1,0 +1,85 @@
+# ============================================================
+#  EX5 Reader .gitignore
+#  目标:源代码入仓,所有编译/安装中间产物不入仓
+# ============================================================
+
+# ---- 编译产物 ----
+# build.bat 的所有输出位置
+/build/
+/bin/
+# 散落的编译中间文件
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.res
+*.o
+*.a
+*.so
+*.dylib
+
+# ---- 测试 / 调试残留 ----
+test_plugin.obj
+
+# ---- 安装脚本临时文件 ----
+tmpinno.log
+*.log
+
+# ---- Visual Studio 用户/临时文件 ----
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.cachefile
+*.VC.db
+*.VC.opendb
+ipch/
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+Win32/
+ARM/
+ARM64/
+
+# ---- INNO Setup 临时 ----
+installer/Output/
+
+# ---- OS 杂项 ----
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_view.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# ---- 编辑器 / IDE ----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ---- 用户/隐私 ----
+# 个人 ex5 电子书(根据 RFC EX5-001 可放,但不强制入仓)
+# *.ex5
+# 临时工作库(read_data.db 打开时生成的同名 .work.db)
+*.work.db
+*.tmp

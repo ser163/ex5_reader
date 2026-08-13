@@ -1,0 +1,40 @@
+#include <windows.h>
+
+100 ICON "images\\ex5_reader.ico"
+
+// 工具栏按钮图标(PNG,内嵌资源;程序也支持 exe 同目录 icons\<key>.png 外部覆盖)
+201 RCDATA "icons\\open.png"
+202 RCDATA "icons\\mark.png"
+203 RCDATA "icons\\excerpt.png"
+204 RCDATA "icons\\note.png"
+205 RCDATA "icons\\think.png"
+206 RCDATA "icons\\notes.png"
+207 RCDATA "icons\\thoughts.png"
+208 RCDATA "icons\\rate.png"
+209 RCDATA "icons\\save.png"
+210 RCDATA "icons\\user.png"
+
+1 24 "src\\app.manifest"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404B0"
+        BEGIN
+            VALUE "CompanyName",      "EX5 Reader Project"
+            VALUE "FileDescription",  "EX5 \u9605\u8bfb\u5668 (RFC EX5-001)"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "ex5reader_gui"
+            VALUE "OriginalFilename", "ex5reader_gui.exe"
+            VALUE "ProductName",      "EX5 \u9605\u8bfb\u5668"
+            VALUE "ProductVersion",   "1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
