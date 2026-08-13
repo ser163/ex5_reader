@@ -79,10 +79,47 @@ void Book::resetZip_() {
     zipMem_.clear();
 }
 
+// 扫同目录下所有 *.work.db,凡是 SQLite 格式的就删掉(EX5 Reader 的临时工作库)。
+// 用来清掉老版本写出的"乱码 UTF-16 名字"残留(老版本用 std::ofstream(const char*)
+// 把 UTF-8 字节当 CP_ACP 解读,NTFS 上文件名是 U+FFFD/U+E0FF 之类,资源管理器显示为 "???xxx")。
+// 不用重建老路径的 wide char 字节(不同 MSVC 版本行为不同,猜不中),直接走 NTFS 通配符
+// 枚举 + SQLite header 验证:是 EX5 的 work.db 就删,不是就跳过,完全安全。
+static void cleanupLegacyWorkDb_(const std::wstring& ex5PathW) {
+    if (ex5PathW.empty()) return;
+    // 截目录部分(去掉最后的 "\xxx.ex5")
+    const wchar_t* p = wcsrchr(ex5PathW.c_str(), L'\\');
+    if (!p) p = wcsrchr(ex5PathW.c_str(), L'/');
+    if (!p) return;
+    std::wstring dir(ex5PathW.c_str(), (size_t)(p - ex5PathW.c_str()) + 1);  // 含末尾 '\'
+    std::wstring pattern = dir + L"*.work.db";
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW(pattern.c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        // 跳过目录
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        // 拼出完整宽字符路径(目录 + cFileName 仍可能含 U+FFFD 之类,NTFS 接受)
+        std::wstring full = dir + fd.cFileName;
+        // 读前 16 字节,验证是不是 SQLite 头
+        std::ifstream f(full.c_str(), std::ios::binary);
+        if (!f) continue;
+        char hdr[16] = {};
+        f.read(hdr, sizeof(hdr));
+        f.close();
+        static const char kSqliteHdr[] = "SQLite format 3";
+        if (memcmp(hdr, kSqliteHdr, sizeof(kSqliteHdr) - 1) == 0) {
+            _wremove(full.c_str());   // 是 EX5 的 work.db(无论是新正确命名还是老乱码命名),删
+        }
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+}
+
 void Book::close_() {
     resetZip_();
     if (db_) { sqlite3_close(db_); db_ = nullptr; }
     if (!dbTmpPathW_.empty()) { _wremove(dbTmpPathW_.c_str()); dbTmpPathW_.clear(); }
+    // 顺手清掉同目录下老的"乱码命名" work.db 残留(老版本 std::ofstream(const char*) 写出的)
+    cleanupLegacyWorkDb_(pathW_);
 }
 
 Book::~Book() {
