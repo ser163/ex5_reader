@@ -268,6 +268,25 @@ void applyToolbarIcons() {
     }
 }
 
+// ---------------- 关于 ----------------
+// 弹一个模态信息框,展示作者/联系方式/项目信息
+void showAbout() {
+    std::wstring text =
+        L"EX5 Reader  (ex5reader)  v1.0.0\n"
+        L"\n"
+        L"一款符合 RFC EX5-001 协议的电子书阅读器\n"
+        L"你的划线与心得,永远跟着书走。\n"
+        L"\n"
+        L"作者:    Harry Liu\n"
+        L"邮箱:    L3478830@163.com\n"
+        L"日期:    2026-08-13\n"
+        L"GitHub:  https://github.com/ser163/ex5_reader\n"
+        L"\n"
+        L"本程序遵循 MIT 开源协议。\n"
+        L"使用的第三方库:miniz、nlohmann/json、SQLite(INNO Setup)。";
+    MessageBoxW(g_hwnd, text.c_str(), L"关于 EX5 Reader", MB_ICONINFORMATION | MB_OK);
+}
+
 // ---------------- 视图模式 ----------------
 // 0=舒心(左右侧栏 + 图片按钮)  1=极简(只保留阅读区,按钮不加载图片)
 void setViewMode(int mode) {
@@ -401,6 +420,10 @@ static LRESULT CALLBACK MainProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             AppendMenuW(g_hTextMenu, MF_STRING, IDM_ARIGHT,  L"右对齐(&R)");
             AppendMenuW(hBar, MF_POPUP, (UINT_PTR)g_hTextMenu, L"文字(&T)");
             pluginsBuildMenu(hBar);   // 有插件时追加「插件」菜单
+            // 「帮助」菜单(最右):关于
+            HMENU hHelpMenu = CreatePopupMenu();
+            AppendMenuW(hHelpMenu, MF_STRING, IDM_ABOUT, L"关于 EX5 Reader(&A)...");
+            AppendMenuW(hBar, MF_POPUP, (UINT_PTR)hHelpMenu, L"帮助(&H)");
             SetMenu(g_hwnd, hBar);
             g_viewMode = iniGetViewMode();   // 启动时恢复上次的视图模式
             applyToolbarIcons();             // 舒心模式挂图标,极简模式纯文字
@@ -592,6 +615,8 @@ static LRESULT CALLBACK MainProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         }
         case IDB_SAVE: saveBook(false); break;
         case IDB_USER: if (g_open) showUserDialog(); break;
+        // ---- 「帮助」菜单 ----
+        case IDM_ABOUT: showAbout(); break;
         // ---- 「文字」菜单 ----
         case IDM_FONT:    chooseFontDlg(); break;
         case IDM_BIGGER:  zoomFont(+2); break;

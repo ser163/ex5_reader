@@ -1,166 +1,166 @@
 # EX5 Reader
 
-> 一款符合 RFC EX5-001 协议的电子书阅读器 —— 你的划线与心得,永远跟着书走。
+> An e-book reader implementing the RFC EX5-001 protocol — your highlights and notes travel with the book.
 
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078d4)](https://github.com/ser163/ex5_reader)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-00599C)](https://isocpp.org/)
 [![MSVC](https://img.shields.io/badge/MSVC-2022-CC2929)](https://visualstudio.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## 项目简介
+## Overview
 
-EX5 Reader 是一款**单文件可执行、零运行时依赖**的电子书阅读器,完整实现了 [RFC EX5-001](https://github.com/ser163/ex5_reader/blob/main/docs/%E4%BA%A7%E5%93%81%E6%96%87%E6%A1%A3.md) 协议(`.ex5` 文件格式 v1.0,实现兼容到 v1.1 共享阅读)。
+EX5 Reader is a **single-binary, zero-runtime-dependency** e-book reader that fully implements the [RFC EX5-001](docs/产品文档.md) protocol (`.ex5` file format v1.0, with v1.1 shared-reading compatibility).
 
-`.ex5` 是一种**基于 ZIP 容器的电子书格式**:把书籍内容(JSON 元数据 + 章节资源)与读者数据(SQLite 数据库)封装在同一个文件里。阅读进度、划线、摘抄、笔记、心得、书评、评分 —— **全部随书携带**,换设备、换软件、丢给朋友,数据都跟着走。
+`.ex5` is a **ZIP-based e-book container**: book content (JSON metadata + chapter resources) and reader data (SQLite database) live in the same file. Reading progress, highlights, excerpts, notes, inspirations, reviews, and ratings — **all travel with the book**. Switch devices, switch software, hand it to a friend — your data goes with you.
 
-提供两种形态:
+Two builds are provided:
 
-- **`bin\ex5reader.exe`** — 命令行版(CLI),适合脚本化与协议调试
-- **`bin\ex5reader_gui.exe`** — 图形界面版(GUI,Win32 原生),鼠标选文划线、黄色高亮渲染
+- **`bin\ex5reader.exe`** — command-line interface, ideal for scripting and protocol debugging
+- **`bin\ex5reader_gui.exe`** — graphical interface (native Win32), with mouse-driven highlighting and yellow text rendering
 
-## 特性
+## Features
 
-| 类别 | 功能 |
+| Category | Details |
 |---|---|
-| **阅读** | 流式续载(超大书不爆内存)、断点续读、章节跳转、夜间模式、字体/字号/颜色/背景调节 |
-| **批注** | 划线(可附批注)、摘抄、笔记、心得;按章节/类型筛选;TXT 导出;**右键边栏条目 → 查看完整详情** |
-| **共读** | **v1.1 共享阅读**:未加密的 `.ex5` 文件中,划线/摘抄/笔记/心得/书评/评分对所有持文件者**只读共享**(带作者名),仅作者本人可编辑/删除 |
-| **多用户** | 内置「本地读者」,GUI 可自由新建/切换/设密码;密码用 16 字节随机盐 + SHA-256 存,常时比较 |
-| **格式** | `.ex5` = ZIP + JSON + SQLite;支持 `.txt` / `.html` 章节资源;加密文件(`encrypt_scope != 0`)会明确拒绝 |
-| **可扩展** | DLL 插件机制(扫描 `plugins\*.dll`),标准 SDK 头文件,API 版本校验,热加载;自带 demo「阅读统计」插件 |
+| **Reading** | Streamed loading (huge books without OOM), resume from last position, chapter navigation, night mode, font/size/color/background customization |
+| **Annotations** | Highlights (with optional comment), excerpts, notes, inspirations; filter by chapter / type; TXT export; **right-click sidebar entry → view full detail** |
+| **Shared Reading** | **v1.1 shared reading**: in unencrypted `.ex5` files, highlights / excerpts / notes / inspirations / reviews / ratings are **read-only shared** among all holders (with author names). Only the original author can edit or delete. |
+| **Multi-user** | Built-in `local` user; GUI can create / switch / password-protect additional users. Passwords stored as 16-byte random salt + SHA-256, constant-time compared. |
+| **Format** | `.ex5` = ZIP + JSON + SQLite; supports `.txt` / `.html` chapter resources. Encrypted files (`encrypt_scope != 0`) are explicitly rejected. |
+| **Extensible** | DLL plugin mechanism (scans `plugins\*.dll`), standard SDK header, API version check, hot-load. Ships with a demo "Reading Stats" plugin. |
 
-## 快速开始
+## Quick Start
 
-### 环境要求
+### Requirements
 
 - **Windows 10/11 x64**
-- **MSVC 2022**(Community / Build Tools,带 C++ 桌面开发工作负载)
+- **MSVC 2022** (Community or Build Tools, with the "Desktop development with C++" workload)
 
-### 编译
+### Build
 
-仓库根目录执行:
+From the repo root:
 
 ```cmd
 build.bat
 ```
 
-脚本会自动:
-1. 拉起 `vcvars64.bat`
-2. 编译 `ex5reader.exe`(CLI)
-3. 编译 `ex5reader_gui.exe`(GUI,带 rc 资源)
-4. 编译示例插件 `bin\plugins\demo_stats.dll`
+The script will:
+1. Source `vcvars64.bat`
+2. Build `ex5reader.exe` (CLI)
+3. Build `ex5reader_gui.exe` (GUI, with .rc resources)
+4. Build the demo plugin `bin\plugins\demo_stats.dll`
 
-产物在 `bin\` 目录,零运行时依赖,直接双击即可。
+Output lives in `bin\`. Zero runtime dependencies — just double-click to run.
 
-### 运行
+### Run
 
-**GUI(推荐)**:
+**GUI (recommended):**
 
 ```cmd
 bin\ex5reader_gui.exe samples\sample_book.ex5
 ```
 
-也支持双击 `.ex5` 文件(需先跑 `installer\ex5_setup.iss` 注册文件关联)。
+Double-click also works after running `installer\ex5_setup.iss` to register the file association.
 
-**CLI**:
+**CLI:**
 
 ```cmd
 bin\ex5reader.exe samples\sample_book.ex5
 ```
 
-进入交互式 REPL,输入 `help` 查看命令。
+Drops you into an interactive REPL. Type `help` for the command list.
 
-### 自己造一本书
+### Make Your Own Book
 
 ```cmd
 python tools\make_sample.py
 ```
 
-生成 `samples\sample_book.ex5`(3 章《海与灯》),包含完整 `book_data/`、`resources/`、空 `read_data.db`(7 张表)与 `meta.xml`。
+Generates `samples\sample_book.ex5` (3 chapters, "Sea and Light"), including complete `book_data/`, `resources/`, an empty `read_data.db` (7 tables), and `meta.xml`.
 
-## CLI 命令一览
+## CLI Commands
 
 ```
-info                          书籍信息
-chapters                      章节目录
-read <章> [偏移] [字数]         阅读章节(自动记录进度)
-mark <章> <起> <止> [批注]      划线(可附批注)
-excerpt <章> <起> <止>          摘抄原文
-note <章> <内容>                写笔记
-think <章> <内容>               写心得
-notes / thoughts / reviews      查看全部记录
-delnote <id> / delthink <id>   删除记录
-rate <1-5>                     评分
-review <内容>                   写书评
-progress                       阅读进度
-save                           立即保存(写回 .ex5)
-quit                           自动保存并退出
+info                          Book metadata
+chapters                      Chapter list
+read <ch> [offset] [count]    Read a chapter (auto-records progress)
+mark <ch> <start> <end> [cmt] Highlight (optional comment)
+excerpt <ch> <start> <end>    Excerpt raw text
+note <ch> <content>           Write a note
+think <ch> <content>          Write an inspiration
+notes / thoughts / reviews    List all records
+delnote <id> / delthink <id>  Delete a record
+rate <1-5>                    Rate the book
+review <content>              Write a review
+progress                      Reading progress
+save                          Save immediately (rewrite .ex5)
+quit                          Auto-save and exit
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 ex5_reader/
-├── src/                     源码
-│   ├── main.cpp             CLI 入口
-│   ├── ex5book.h/.cpp       EX5 容器读写层(ZIP/JSON/SQLite)
-│   ├── gui_main.cpp         主窗口 / 工具栏 / 消息循环
-│   ├── gui_reader.cpp       阅读区(流式加载 / 高亮 / 划线)
-│   ├── gui_panel.cpp        右侧笔记面板
-│   ├── gui_dialogs.cpp      笔记本/心得集编辑器
-│   ├── gui_style.cpp        文字样式 / 夜间模式
-│   ├── gui_plugin.cpp       插件宿主
-│   ├── ex5_plugin.h         插件 SDK 头文件
+├── src/                     Source
+│   ├── main.cpp             CLI entry
+│   ├── ex5book.h/.cpp       EX5 container I/O layer (ZIP/JSON/SQLite)
+│   ├── gui_main.cpp         Main window / toolbar / message loop
+│   ├── gui_reader.cpp       Reading area (streamed load / highlight / mark)
+│   ├── gui_panel.cpp        Right-side notes panel
+│   ├── gui_dialogs.cpp      Notebook / inspirations editor
+│   ├── gui_style.cpp        Text style / night mode
+│   ├── gui_plugin.cpp       Plugin host
+│   ├── ex5_plugin.h         Plugin SDK header
 │   └── app.rc / app.manifest
-├── plugins/demo/            示例插件「阅读统计」源码
-├── third_party/             静态编译的第三方库
-│   ├── miniz/               ZIP 读写 (richgel999/miniz)
+├── plugins/demo/            Demo plugin "Reading Stats" source
+├── third_party/             Statically-linked third-party libs
+│   ├── miniz/               ZIP I/O (richgel999/miniz)
 │   ├── sqlite3.c/.h         SQLite amalgamation
 │   └── json.hpp             nlohmann/json
-├── samples/                 示例书
-├── docs/                    产品文档、协议说明
-├── installer/               INNO Setup 安装脚本 + .iss
-├── tools/make_sample.py     示例书生成器
-└── build.bat                一键编译
+├── samples/                 Sample books
+├── docs/                    Product docs, protocol notes
+├── installer/               INNO Setup script (.iss)
+├── tools/make_sample.py     Sample book generator
+└── build.bat                One-shot build script
 ```
 
-## 技术栈
+## Tech Stack
 
-| 类别 | 选型 | 理由 |
+| Category | Choice | Rationale |
 |---|---|---|
-| 语言 | C++17 | 性能 + 系统 API 友好 |
-| GUI | Win32 原生 | 零依赖、单文件 ~1.8MB、启动 < 100ms |
-| ZIP | miniz | 单头文件、纯 C、静态编译 |
-| JSON | nlohmann/json | 易用、协议字段多 |
-| 数据库 | SQLite amalgamation | 单 .c 文件,静态编译进 exe |
-| 密码学 | Windows BCrypt | 系统原生,生成随机盐 |
-| 字符 | UTF-8 + 手写码点工具 | 中文路径 / 中文内容全程 UTF-8 |
+| Language | C++17 | Performance + native system API |
+| GUI | Win32 native | Zero dependency, ~1.8 MB binary, < 100 ms cold start |
+| ZIP | miniz | Single-header, pure C, statically linked |
+| JSON | nlohmann/json | Ergonomic API, many protocol fields |
+| Database | SQLite amalgamation | Single .c file, statically linked |
+| Crypto | Windows BCrypt | OS-native random salt generation |
+| Charset | UTF-8 + handwritten codepoint utils | Chinese paths / content work end-to-end |
 
-## 协议符合性
+## Protocol Conformance
 
-- 实现了 [RFC EX5-001 v1.0](https://github.com/ser163/ex5_reader/blob/main/docs/%E4%BA%A7%E5%93%81%E6%96%87%E6%A1%A3.md) 全部必选功能
-- 实现了 v1.1 草案(§5.4 共享阅读):未加密文件中,`notes` / `inspiration` / `reviews` / `ratings` 对所有持文件者只读共享(带作者名)
-- 加密文件(`encrypt_scope != 0`)会读取并明确报错,本实现不提供解密
+- Implements all required features of [RFC EX5-001 v1.0](docs/产品文档.md)
+- Implements the v1.1 draft (§5.4 shared reading): in unencrypted files, `notes` / `inspiration` / `reviews` / `ratings` are read-only-shared across all holders (with author names)
+- Encrypted files (`encrypt_scope != 0`) are read and explicitly rejected; decryption is not implemented
 
-详见 `docs/产品文档.md`、`docs/插件规范.md`。
+See `docs/产品文档.md` and `docs/插件规范.md` for the full design notes.
 
-## 路线图
+## Roadmap
 
-- [ ] 远程同步(RFC §5 RESTful API)
-- [ ] 加密文件解密支持(等 RFC §4 稳定)
-- [ ] 更多插件样例(翻译 / 朗读 / 主题)
-- [ ] 跨平台:macOS / Linux(Win32 特定代码抽象出 Platform 层后)
+- [ ] Remote sync (RFC §5 RESTful API)
+- [ ] Encrypted-file decryption (waiting for RFC §4 to stabilize)
+- [ ] More plugin samples (translation / TTS / themes)
+- [ ] Cross-platform: macOS / Linux (after abstracting the Win32-specific code behind a Platform layer)
 
-## 贡献
+## Contributing
 
-PR 欢迎!请保持:
+PRs are welcome! Please keep:
 
-- C++17 兼容、MSVC 2022 编译通过
-- 遵循现有命名风格(`snake_case` 函数、`PascalCase` 类型、`kCamelCase` 常量)
-- 新增功能同步更新 `docs/产品文档.md` 与 `docs/插件规范.md`
-- 第三方依赖尽量保持单文件、静态编译
+- C++17-compatible, builds with MSVC 2022
+- Follow the existing naming conventions (`snake_case` functions, `PascalCase` types, `kCamelCase` constants)
+- Update `docs/产品文档.md` and `docs/插件规范.md` when adding features
+- Keep third-party deps single-file, statically linked
 
-## 致谢
+## Acknowledgments
 
 - [miniz](https://github.com/richgel999/miniz) by Rich Geldreich
 - [nlohmann/json](https://github.com/nlohmann/json) by Niels Lohmann
@@ -169,4 +169,4 @@ PR 欢迎!请保持:
 
 ## License
 
-MIT — 详见 [LICENSE](LICENSE)。
+MIT — see [LICENSE](LICENSE).

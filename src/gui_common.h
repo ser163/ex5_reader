@@ -46,7 +46,7 @@ enum {
     IDB_NOTES, IDB_THOUGHTS, IDB_RATE, IDB_SAVE, IDB_USER,
     IDT_ALL = 1201, IDT_MARK, IDT_EXCERPT, IDT_NOTE, IDT_THINK,
     IDB_COLLAPSE = 1206,                                          // 折叠章节列表
-    IDM_DEL = 1301, IDM_VIEW,
+    IDM_DEL = 1301, IDM_VIEW, IDM_ABOUT,
     IDM_FONT = 1401, IDM_BIGGER, IDM_SMALLER, IDM_COLOR, IDM_BGCOLOR,   // 「文字」菜单
     IDM_ALEFT, IDM_ACENTER, IDM_ARIGHT, IDM_NIGHT,
     IDM_MODE_MIN = 1411, IDM_MODE_COMFY,                              // 「模式」菜单
