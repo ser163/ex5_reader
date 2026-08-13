@@ -420,10 +420,10 @@ static LRESULT CALLBACK MainProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             AppendMenuW(g_hTextMenu, MF_STRING, IDM_ARIGHT,  L"右对齐(&R)");
             AppendMenuW(hBar, MF_POPUP, (UINT_PTR)g_hTextMenu, L"文字(&T)");
             pluginsBuildMenu(hBar);   // 有插件时追加「插件」菜单
-            // 「帮助」菜单(最右):关于
-            HMENU hHelpMenu = CreatePopupMenu();
-            AppendMenuW(hHelpMenu, MF_STRING, IDM_ABOUT, L"关于 EX5 Reader(&A)...");
-            AppendMenuW(hBar, MF_POPUP, (UINT_PTR)hHelpMenu, L"帮助(&H)");
+            // 「关于」菜单(最右):目前只有「关于 EX5 Reader」一项,无帮助文档
+            HMENU hAboutMenu = CreatePopupMenu();
+            AppendMenuW(hAboutMenu, MF_STRING, IDM_ABOUT, L"关于 EX5 Reader...");
+            AppendMenuW(hBar, MF_POPUP, (UINT_PTR)hAboutMenu, L"关于(&A)");
             SetMenu(g_hwnd, hBar);
             g_viewMode = iniGetViewMode();   // 启动时恢复上次的视图模式
             applyToolbarIcons();             // 舒心模式挂图标,极简模式纯文字
