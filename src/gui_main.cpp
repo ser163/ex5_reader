@@ -269,15 +269,23 @@ void applyToolbarIcons() {
 }
 
 // ---------------- 关于 ----------------
-// 自定义"关于"对话框:图标 + 元信息 + 可点击的 GitHub 超链接(SysLink 控件)
-// 选用 SysLink 而不是 MessageBoxW,因为后者不支持超链接;SysLink 是原生 Comctl32 控件,
-// 文本用 <a href="...">...</a> 标记,点击触发 NM_CLICK 通知,父窗口 ShellExecuteW 打开浏览器
+// 自定义"关于"对话框:图标 + 元信息 + 可点击的 GitHub 超链接(SysLink 控件)+ 滚动条
+// 关闭:右上角 X、Esc 键、WM_CLOSE;不提供"确定"按钮(信息展示型,无需确认)
+// 滚动:方向键(↑↓/PageUp/PageDown/Home/End)、鼠标滚轮、拖动滚动条;窗口比内容区矮,溢出部分可滚
+static const int kAboutViewH = 300;       // 窗口可视高度(略矮,溢出以体现滚动)
+static const int kAboutContentH = 460;     // 内容区虚拟总高度(超出窗口 160 像素,需要滚动)
+static const int IDC_ABOUT_SCROLL = 1301;  // 我们自己创建的 ScrollBar 子控件 ID
+
+// 滚动一行的像素(方向键 line up/down 一次)
+static const int kAboutLineH = 20;
+
 static LRESULT CALLBACK AboutProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     static HFONT s_hFontBold = nullptr;
+    static HWND s_hScroll = nullptr;  // 我们自己创建的 ScrollBar 子控件
     switch (m) {
     case WM_CREATE: {
-        // SysLink 是 Comctl32 v6 控件,显式注册(幂等)
-        INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_LINK_CLASS };
+        // 注册 SysLink + ScrollBar(SCROLLBAR 类在 ICC_BAR_CLASSES 里)
+        INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_LINK_CLASS | ICC_BAR_CLASSES };
         InitCommonControlsEx(&icc);
 
         // 主标题加粗 20pt
@@ -301,7 +309,7 @@ static LRESULT CALLBACK AboutProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             65, 22, 380, 24, h, nullptr, nullptr, nullptr);
         SendMessageW(hTitle, WM_SETFONT, (WPARAM)s_hFontBold, TRUE);
 
-        // 元信息行
+        // 元信息行(从 y=55 开始,每行 20 像素)
         const wchar_t* lines[] = {
             L"一款符合 RFC EX5-001 协议的电子书阅读器",
             L"你的划线与心得,永远跟着书走。",
@@ -318,25 +326,62 @@ static LRESULT CALLBACK AboutProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         }
 
         // GitHub 超链接(SysLink 控件,点击后 ShellExecuteW 打开浏览器)
+        // 故意不加 WS_TABSTOP:让方向键不被 IsDialogMessageW 路由到 SysLink 切焦点,而是
+        // 直接到 WndProc 处理成"滚动内容"。SysLink 仍可用鼠标点击触发超链接。
         CreateWindowExW(0, WC_LINK,
             L"GitHub:  <a href=\"https://github.com/ser163/ex5_reader\">https://github.com/ser163/ex5_reader</a>",
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+            WS_CHILD | WS_VISIBLE,
             65, y + 6 * 20, 380, 18, h, nullptr, nullptr, nullptr);
 
-        // 协议 + 致谢
+        // 协议
         CreateWindowW(L"STATIC",
             L"本程序遵循 MIT 开源协议。",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
-            65, 218, 380, 18, h, nullptr, nullptr, nullptr);
-        CreateWindowW(L"STATIC",
-            L"使用的第三方库:miniz、nlohmann/json、SQLite(INNO Setup)。",
-            WS_CHILD | WS_VISIBLE | SS_LEFT,
-            65, 238, 380, 36, h, nullptr, nullptr, nullptr);
+            65, 195, 380, 18, h, nullptr, nullptr, nullptr);
 
-        // 确定按钮
-        CreateWindowW(L"BUTTON", L"确定",
-            WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-            365, 290, 80, 28, h, (HMENU)IDOK, nullptr, nullptr);
+        // 致谢(让内容超出窗口,滚动条/方向键有作用)
+        CreateWindowW(L"STATIC",
+            L"本软件使用的开源库:",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 225, 380, 18, h, nullptr, nullptr, nullptr);
+        const wchar_t* credits[] = {
+            L"  \u2022  miniz        — Rich Geldreich (Unlicense)",
+            L"  \u2022  nlohmann/json — Niels Lohmann (MIT)",
+            L"  \u2022  SQLite       — D. Richard Hipp (Public Domain)",
+            L"  \u2022  INNO Setup   — Jordan Russell",
+        };
+        for (int i = 0; i < 4; i++) {
+            CreateWindowW(L"STATIC", credits[i],
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                65, 250 + i * 20, 380, 18, h, nullptr, nullptr, nullptr);
+        }
+
+        // 版权 + 关闭提示
+        CreateWindowW(L"STATIC",
+            L"\u00a9 2026 Harry Liu.  All rights reserved.",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 340, 380, 18, h, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC",
+            L"关闭窗口:按 Esc 键,或点击右上角 \u00d7。",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 420, 380, 18, h, nullptr, nullptr, nullptr);
+
+        // 滚动条子控件(右侧,自己创建,SBS_VERT 竖直滚动条)
+        // 不用窗口自带的 WS_VSCROLL(WS_OVERLAPPED + WS_VSCROLL 在某些情况不创建标准滚动条)
+        s_hScroll = CreateWindowExW(0, L"SCROLLBAR", nullptr,
+            WS_CHILD | WS_VISIBLE | SBS_VERT,
+            0, 0, 0, 0,   // 初始 0,WM_SIZE 里 MoveWindow 定位
+            h, (HMENU)(UINT_PTR)IDC_ABOUT_SCROLL, GetModuleHandleW(nullptr), nullptr);
+        // 设置滚动范围(老 API,更可靠)
+        SetScrollRange(s_hScroll, SB_CTL, 0, kAboutContentH - 1, FALSE);
+        SetScrollPos(s_hScroll, SB_CTL, 0, TRUE);
+        return 0;
+    }
+    case WM_SIZE: {
+        // 调整滚动条位置(右侧 17 像素宽,占满 client area 高度)
+        RECT rc; GetClientRect(h, &rc);
+        int scrollW = GetSystemMetrics(SM_CXVSCROLL);
+        MoveWindow(s_hScroll, rc.right - scrollW, 0, scrollW, rc.bottom, TRUE);
         return 0;
     }
     case WM_NOTIFY: {
@@ -348,12 +393,78 @@ static LRESULT CALLBACK AboutProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         }
         break;
     }
-    case WM_COMMAND:
-        if (LOWORD(w) == IDOK || LOWORD(w) == IDCANCEL) {
-            DestroyWindow(h);
+    case WM_VSCROLL: {
+        // 滚动条消息:根据子命令调整 nPos,ScrollWindowEx 平滑移动所有子控件
+        // 注意:wparam LOWORD 是 SB_* 命令,来自我们的 s_hScroll 滚动条控件
+        // SCROLLINFO 里的 nPage 从 si.nPage 推算(clientH - scrollW)
+        RECT rc; GetClientRect(h, &rc);
+        int viewH = rc.bottom;
+        int oldPos = GetScrollPos(s_hScroll, SB_CTL);
+        int newPos = oldPos;
+        switch (LOWORD(w)) {
+        case SB_LINEUP:      newPos -= kAboutLineH; break;
+        case SB_LINEDOWN:    newPos += kAboutLineH; break;
+        case SB_PAGEUP:      newPos -= viewH; break;
+        case SB_PAGEDOWN:    newPos += viewH; break;
+        case SB_TOP:         newPos = 0; break;
+        case SB_BOTTOM:      newPos = kAboutContentH - 1; break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION:
+            newPos = (int)HIWORD(w); break;
+        }
+        int maxPos = kAboutContentH - 1;
+        if (newPos < 0) newPos = 0;
+        if (newPos > maxPos) newPos = maxPos;
+        if (newPos != oldPos) {
+            int dy = oldPos - newPos;   // 正值表示向上滚动(内容向下走),负值表示向下滚动
+            ScrollWindowEx(h, 0, dy, nullptr, nullptr, 0, nullptr, SW_INVALIDATE | SW_ERASE);
+            SetScrollPos(s_hScroll, SB_CTL, newPos, TRUE);
+        }
+        return 0;
+    }
+    case WM_MOUSEWHEEL: {
+        // 鼠标滚轮:一次滚动 3 行(kAboutLineH * 3 = 60 像素)
+        int delta = GET_WHEEL_DELTA_WPARAM(w);
+        int lines = delta * 3 / WHEEL_DELTA;
+        if (lines == 0) lines = (delta > 0) ? 1 : -1;
+        int oldPos = GetScrollPos(s_hScroll, SB_CTL);
+        int newPos = oldPos - lines * kAboutLineH;
+        int maxPos = kAboutContentH - 1;
+        if (newPos < 0) newPos = 0;
+        if (newPos > maxPos) newPos = maxPos;
+        if (newPos != oldPos) {
+            int dy = oldPos - newPos;
+            ScrollWindowEx(h, 0, dy, nullptr, nullptr, 0, nullptr, SW_INVALIDATE | SW_ERASE);
+            SetScrollPos(s_hScroll, SB_CTL, newPos, TRUE);
+        }
+        return 0;
+    }
+    case WM_KEYDOWN: {
+        // 方向键 / Page / Home / End 触发滚动;Esc 关闭窗口
+        int sb = -1;
+        switch (w) {
+        case VK_UP:    sb = SB_LINEUP;   break;
+        case VK_DOWN:  sb = SB_LINEDOWN; break;
+        case VK_PRIOR: sb = SB_PAGEUP;   break;
+        case VK_NEXT:  sb = SB_PAGEDOWN; break;
+        case VK_HOME:  sb = SB_TOP;      break;
+        case VK_END:   sb = SB_BOTTOM;   break;
+        case VK_ESCAPE: DestroyWindow(h); return 0;
+        }
+        if (sb >= 0) {
+            // WM_VSCROLL 是父窗口消息,系统已建立 ScrollBar→父窗口的转发;
+            // 手动模拟:直接把 WM_VSCROLL 发给 About 窗口(自己)
+            SendMessageW(h, WM_VSCROLL, MAKELONG(sb, 0), 0);
             return 0;
         }
         break;
+    }
+    case WM_ERASEBKGND: {
+        // 滚动时背景需要重画(否则残影)
+        RECT rc; GetClientRect(h, &rc);
+        FillRect((HDC)w, &rc, (HBRUSH)(COLOR_BTNFACE + 1));
+        return 1;
+    }
     case WM_CLOSE:
         DestroyWindow(h);
         return 0;
@@ -378,17 +489,25 @@ void showAbout() {
     }
     HWND h = CreateWindowExW(WS_EX_DLGMODALFRAME,
         L"Ex5AboutDlg", L"关于 EX5 Reader",
-        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT, 470, 350,
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE,
+        100, 100, 470, kAboutViewH,                                       // 显式坐标,避免 CW_USEDEFAULT 延后 layout
         g_hwnd, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (!h) return;
+    // 显式设一次滚动条(WM_SIZE 也会设,这里是双保险)—— 用老 API SetScrollRange/Pos
+    {
+        RECT rc; GetClientRect(h, &rc);
+        if (rc.bottom > 0) {
+            SetScrollRange(h, SB_VERT, 0, kAboutContentH - 1, TRUE);
+            SetScrollPos(h, SB_VERT, 0, TRUE);
+        }
+    }
     EnableWindow(g_hwnd, FALSE);
+    // 不用 IsDialogMessageW:它会拦截方向键/ESC/Tab 等并路由给焦点控件;
+    // 我们的方向键要处理成"滚动",所以直接派发,让 WndProc 收到所有键盘消息。
     MSG msg;
     while (IsWindow(h) && GetMessageW(&msg, nullptr, 0, 0)) {
-        if (!IsDialogMessageW(h, &msg)) {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
     }
     EnableWindow(g_hwnd, TRUE);
     SetForegroundWindow(g_hwnd);
