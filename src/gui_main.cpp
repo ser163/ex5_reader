@@ -269,22 +269,129 @@ void applyToolbarIcons() {
 }
 
 // ---------------- 关于 ----------------
-// 弹一个模态信息框,展示作者/联系方式/项目信息
+// 自定义"关于"对话框:图标 + 元信息 + 可点击的 GitHub 超链接(SysLink 控件)
+// 选用 SysLink 而不是 MessageBoxW,因为后者不支持超链接;SysLink 是原生 Comctl32 控件,
+// 文本用 <a href="...">...</a> 标记,点击触发 NM_CLICK 通知,父窗口 ShellExecuteW 打开浏览器
+static LRESULT CALLBACK AboutProc(HWND h, UINT m, WPARAM w, LPARAM l) {
+    static HFONT s_hFontBold = nullptr;
+    switch (m) {
+    case WM_CREATE: {
+        // SysLink 是 Comctl32 v6 控件,显式注册(幂等)
+        INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_LINK_CLASS };
+        InitCommonControlsEx(&icc);
+
+        // 主标题加粗 20pt
+        s_hFontBold = CreateFontW(20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei");
+
+        // 应用图标(优先用内嵌资源 #100,即 app.rc 里的主图标)
+        HICON hi = (HICON)LoadImageW(GetModuleHandleW(nullptr),
+            MAKEINTRESOURCEW(100), IMAGE_ICON, 32, 32, 0);
+        if (!hi) hi = LoadIconW(nullptr, IDI_INFORMATION);
+        HWND hIcon = CreateWindowW(L"STATIC", nullptr,
+            WS_CHILD | WS_VISIBLE | SS_ICON,
+            20, 18, 32, 32, h, nullptr, nullptr, nullptr);
+        SendMessageW(hIcon, STM_SETIMAGE, IMAGE_ICON, (LPARAM)hi);
+
+        // 主标题
+        HWND hTitle = CreateWindowW(L"STATIC",
+            L"EX5 Reader  (ex5reader)  v1.0.0",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 22, 380, 24, h, nullptr, nullptr, nullptr);
+        SendMessageW(hTitle, WM_SETFONT, (WPARAM)s_hFontBold, TRUE);
+
+        // 元信息行
+        const wchar_t* lines[] = {
+            L"一款符合 RFC EX5-001 协议的电子书阅读器",
+            L"你的划线与心得,永远跟着书走。",
+            L"",
+            L"作者:    Harry Liu",
+            L"邮箱:    L3478830@163.com",
+            L"日期:    2026-08-13",
+        };
+        int y = 55;
+        for (int i = 0; i < 6; i++) {
+            CreateWindowW(L"STATIC", lines[i],
+                WS_CHILD | WS_VISIBLE | SS_LEFT,
+                65, y + i * 20, 380, 18, h, nullptr, nullptr, nullptr);
+        }
+
+        // GitHub 超链接(SysLink 控件,点击后 ShellExecuteW 打开浏览器)
+        CreateWindowExW(0, WC_LINK,
+            L"GitHub:  <a href=\"https://github.com/ser163/ex5_reader\">https://github.com/ser163/ex5_reader</a>",
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+            65, y + 6 * 20, 380, 18, h, nullptr, nullptr, nullptr);
+
+        // 协议 + 致谢
+        CreateWindowW(L"STATIC",
+            L"本程序遵循 MIT 开源协议。",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 218, 380, 18, h, nullptr, nullptr, nullptr);
+        CreateWindowW(L"STATIC",
+            L"使用的第三方库:miniz、nlohmann/json、SQLite(INNO Setup)。",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            65, 238, 380, 36, h, nullptr, nullptr, nullptr);
+
+        // 确定按钮
+        CreateWindowW(L"BUTTON", L"确定",
+            WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+            365, 290, 80, 28, h, (HMENU)IDOK, nullptr, nullptr);
+        return 0;
+    }
+    case WM_NOTIFY: {
+        NMHDR* nm = (NMHDR*)l;
+        if (nm->code == NM_CLICK || nm->code == NM_RETURN) {
+            NMLINK* nml = (NMLINK*)l;
+            ShellExecuteW(h, L"open", nml->item.szUrl, nullptr, nullptr, SW_SHOW);
+            return 1;   // 告诉 SysLink 已处理,不要走默认行为
+        }
+        break;
+    }
+    case WM_COMMAND:
+        if (LOWORD(w) == IDOK || LOWORD(w) == IDCANCEL) {
+            DestroyWindow(h);
+            return 0;
+        }
+        break;
+    case WM_CLOSE:
+        DestroyWindow(h);
+        return 0;
+    case WM_NCDESTROY:
+        if (s_hFontBold) { DeleteObject(s_hFontBold); s_hFontBold = nullptr; }
+        return 0;
+    }
+    return DefWindowProcW(h, m, w, l);
+}
+
 void showAbout() {
-    std::wstring text =
-        L"EX5 Reader  (ex5reader)  v1.0.0\n"
-        L"\n"
-        L"一款符合 RFC EX5-001 协议的电子书阅读器\n"
-        L"你的划线与心得,永远跟着书走。\n"
-        L"\n"
-        L"作者:    Harry Liu\n"
-        L"邮箱:    L3478830@163.com\n"
-        L"日期:    2026-08-13\n"
-        L"GitHub:  https://github.com/ser163/ex5_reader\n"
-        L"\n"
-        L"本程序遵循 MIT 开源协议。\n"
-        L"使用的第三方库:miniz、nlohmann/json、SQLite(INNO Setup)。";
-    MessageBoxW(g_hwnd, text.c_str(), L"关于 EX5 Reader", MB_ICONINFORMATION | MB_OK);
+    static bool s_reg = false;
+    if (!s_reg) {
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = AboutProc;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+        wc.lpszClassName = L"Ex5AboutDlg";
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        RegisterClassW(&wc);
+        s_reg = true;
+    }
+    HWND h = CreateWindowExW(WS_EX_DLGMODALFRAME,
+        L"Ex5AboutDlg", L"关于 EX5 Reader",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, 470, 350,
+        g_hwnd, nullptr, GetModuleHandleW(nullptr), nullptr);
+    if (!h) return;
+    EnableWindow(g_hwnd, FALSE);
+    MSG msg;
+    while (IsWindow(h) && GetMessageW(&msg, nullptr, 0, 0)) {
+        if (!IsDialogMessageW(h, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+    EnableWindow(g_hwnd, TRUE);
+    SetForegroundWindow(g_hwnd);
 }
 
 // ---------------- 视图模式 ----------------
