@@ -3,7 +3,7 @@
 
 #define MyAppName "EX5 阅读器"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "EX5 Reader Project"
+#define MyAppPublisher "EX5 Reader"
 
 [Setup]
 AppId={{7C9A2E41-5B3D-4E6F-9A1C-2D8E0F4B6A73}
@@ -11,7 +11,7 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 VersionInfoVersion=1.0.0.0
-VersionInfoDescription=EX5 阅读器安装程序(RFC EX5-001)
+VersionInfoDescription=EX5 阅读器安装程序
 DefaultDirName={autopf}\EX5Reader
 DefaultGroupName={#MyAppName}
 OutputDir=output
@@ -52,7 +52,6 @@ Source: "..\docs\插件规范.md";        DestDir: "{app}\docs"
 Name: "{group}\{#MyAppName}";            Filename: "{app}\ex5reader_gui.exe"; IconFilename: "{app}\ex5_reader.ico"
 Name: "{group}\{#MyAppName}(命令行版)";   Filename: "{app}\ex5reader.exe"
 Name: "{group}\阅读示例书《海与灯》";      Filename: "{app}\ex5reader_gui.exe"; Parameters: """{app}\samples\sample_book.ex5"""
-Name: "{group}\产品文档";                 Filename: "{app}\docs\产品文档.md"
 Name: "{group}\插件开发规范";               Filename: "{app}\docs\插件规范.md"
 Name: "{autodesktop}\{#MyAppName}";      Filename: "{app}\ex5reader_gui.exe"; IconFilename: "{app}\ex5_reader.ico"; Tasks: desktopicon
 
